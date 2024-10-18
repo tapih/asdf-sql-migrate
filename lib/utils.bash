@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-# TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for sql-migrate.
 GH_REPO="https://github.com/tapih/sql-migrate"
 TOOL_NAME="sql-migrate"
 TOOL_TEST="sql-migrate --help"
@@ -31,8 +30,6 @@ list_github_tags() {
 }
 
 list_all_versions() {
-	# TODO: Adapt this. By default we simply list the tag names from GitHub releases.
-	# Change this function if sql-migrate has other means of determining installable versions.
 	list_github_tags
 }
 
@@ -41,8 +38,10 @@ download_release() {
 	version="$1"
 	filename="$2"
 
-	# TODO: Adapt the release URL convention for sql-migrate
-	url="$GH_REPO/archive/v${version}.tar.gz"
+	platform="$(get_platform)"
+	arch="$(get_arch)"
+
+	url="$GH_REPO/releases/download/v${version}/sql-migrate_${version}_${platform}_${arch}.tar.gz"
 
 	echo "* Downloading $TOOL_NAME release $version..."
 	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
@@ -61,7 +60,6 @@ install_version() {
 		mkdir -p "$install_path"
 		cp -r "$ASDF_DOWNLOAD_PATH"/* "$install_path"
 
-		# TODO: Assert sql-migrate executable exists.
 		local tool_cmd
 		tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"
 		test -x "$install_path/$tool_cmd" || fail "Expected $install_path/$tool_cmd to be executable."
@@ -71,4 +69,32 @@ install_version() {
 		rm -rf "$install_path"
 		fail "An error occurred while installing $TOOL_NAME $version."
 	)
+}
+
+get_platform() {
+	platform="$(uname | tr '[:upper:]' '[:lower:]')"
+
+	echo -n "$platform"
+}
+
+get_arch() {
+	arch="$(uname -m | tr '[:upper:]' '[:lower:]')"
+
+	case "$arch" in
+	x86_64)
+		arch="amd64"
+		;;
+	arm64)
+		arch='arm64'
+		;;
+	aarch64)
+		arch='arm64'
+		;;
+	*)
+		echo "Unsupported arch: $arch" >&2
+		exit 1
+		;;
+	esac
+
+	echo -n "$arch"
 }
